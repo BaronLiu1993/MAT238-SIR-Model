@@ -65,7 +65,7 @@ import matplotlib.pyplot as plt
 
 #Repeat process for each country
 infectious_period = 11  # Use average infectious period to approximate https://www.who.int/news-room/fact-sheets/detail/ebola-disease
-N_population = 7040000 # population of Sierra Leon
+N_population = 4660000 # population of Sierra Leon
 
 df = pd.read_csv("l.csv")
 df['new_cases'] = df['cum_cases'].diff().fillna(0)
@@ -93,7 +93,7 @@ nu = 1 / infectious_period
 df['di_dt'] = df['i'].diff().fillna(0)
 
 #Estimate of beta based on the new_cases
-beta_estimate = 1.547
+beta_estimate = 1.365
 
 #Calculate R0, initial value 
 R0 = beta_estimate / nu
@@ -109,6 +109,8 @@ for t in range(1, len(df)):
     R.append(R_next)
 
 df['S_model'], df['I_model'], df['R_model'] = S, I, R
+
+#Plot for each model
 x = np.array(df['Date'])
 y = np.array(df['S_model'], dtype=float)
 plt.figure(figsize=(100, 10))

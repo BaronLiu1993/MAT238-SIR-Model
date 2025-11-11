@@ -65,7 +65,7 @@ import matplotlib.pyplot as plt
 
 #Repeat process for each country
 infectious_period = 11  # Use average infectious period to approximate https://www.who.int/news-room/fact-sheets/detail/ebola-disease
-N_population = 7040000 # population of Sierra Leon
+N_population = 11770000 # population of guinea
 
 df = pd.read_csv("g.csv")
 df['new_cases'] = df['cum_cases'].diff().fillna(0)
@@ -93,7 +93,7 @@ nu = 1 / infectious_period
 df['di_dt'] = df['i'].diff().fillna(0)
 
 #Estimate of beta based on the new_cases
-beta_estimate = 1.547
+beta_estimate = 2.002
 
 #Calculate R0, initial value 
 R0 = beta_estimate / nu
