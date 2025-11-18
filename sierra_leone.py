@@ -1,61 +1,82 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 
-#Repeat process for each country
-infectious_period = 11  # Use average infectious period to approximate https://www.who.int/news-room/fact-sheets/detail/ebola-disease
-N_population = 7040000 # population of Sierra Leon
+infectious_period = 11          
+N_population = 7_040_000        
+beta_estimate = 1.547           
 
 df = pd.read_csv("sl.csv")
+df['Date'] = pd.to_datetime(df['Date'])
+
+
 df['new_cases'] = df['cum_cases'].diff().fillna(0)
 df['new_deaths'] = df['cum_deaths'].diff().fillna(0)
+
 df['active_cases'] = df['cum_cases'] - df['cum_cases'].shift(infectious_period).fillna(0)
 df['recovered'] = df['cum_cases'].shift(infectious_period).fillna(0) - df['cum_deaths']
 df['removed'] = df['recovered'] + df['cum_deaths']
 
-#I Value
-df['I'] = df['active_cases']
+df['I'] = df['active_cases'].clip(lower=0)
+df['R'] = df['removed'].clip(lower=0)
+df['S'] = (N_population - df['I'] - df['R']).clip(lower=0)
 
-#R Value
-df['R'] = df['removed']
+df['s'] = df['S']
+df['i'] = df['I']
+df['r'] = df['R']
 
-#Susceptible
-df['S'] = N_population - df['I'] - df['R']
-
-# Normalise to allow for comparisons between different countries
-df['s'] = df['S'] 
-df['i'] = df['I'] 
-df['r'] = df['R'] 
-
-# Average infectious period
 nu = 1 / infectious_period
 df['di_dt'] = df['i'].diff().fillna(0)
-
-#Estimate of beta based on the new_cases
-beta_estimate = 1.547
-
-#Calculate R0, initial value 
 R0 = beta_estimate / nu
-S, I, R = [N_population-1], [1], [0]
-dt = 1  # 1 day
 
-for t in range(1, len(df)):
-    S_next = S[-1] - beta_estimate * S[-1] * I[-1] / N_population * dt
-    I_next = I[-1] + (beta_estimate * S[-1] * I[-1] / N_population - nu * I[-1]) * dt
-    R_next = R[-1] + nu * I[-1] * dt
-    S.append(S_next)
-    I.append(I_next)
-    R.append(R_next)
 
-df['S_model'], df['I_model'], df['R_model'] = S, I, R
-x = np.array(df['Date'])
-y = np.array(df['S_model'], dtype=float)
-plt.figure(figsize=(100, 10))
-plt.scatter(x, y, c='blue', marker='o', edgecolors='black', alpha=0.7)
+T_days = len(df) - 1 
+dt = 0.1            
+num_steps = int(T_days / dt) + 1
 
-plt.title("Sierra Leone I(t) Plot")
+t = np.linspace(0, T_days, num_steps)  
+
+S = np.zeros(num_steps)
+I = np.zeros(num_steps)
+R = np.zeros(num_steps)
+
+S[0] = N_population - 1
+I[0] = 1
+R[0] = 0
+
+for k in range(1, num_steps):
+    dS = -beta_estimate * S[k - 1] * I[k - 1] / N_population
+    dI = beta_estimate * S[k - 1] * I[k - 1] / N_population - nu * I[k - 1]
+    dR = nu * I[k - 1]
+
+    S[k] = S[k - 1] + dS * dt
+    I[k] = I[k - 1] + dI * dt
+    R[k] = R[k - 1] + dR * dt
+
+start_date = df['Date'].iloc[0]
+date_fine = start_date + pd.to_timedelta(t, unit="D")
+
+plt.figure(figsize=(12, 6))
+
+plt.plot(date_fine, S, linewidth=2, label='Susceptible $S(t)$ (model)')
+plt.plot(date_fine, I, linewidth=2, label='Infected $I(t)$ (model)')
+plt.plot(date_fine, R, linewidth=2, label='Removed $R(t)$ (model)')
+
+plt.title(
+    "Sierra Leone Ebola Outbreak – SIR Model\n"
+    f"SIR parameters: β = {beta_estimate:.3f}, ν = {nu:.3f} (1/day), "
+    f"$R_0$ = {R0:.2f}, Population N = {N_population:,}"
+)
 plt.xlabel("Date")
-plt.ylabel("I(t) Value From Euler's Method")
-plt.grid(True, linestyle='--', alpha=0.5)
-plt.show()
+plt.ylabel("Number of individuals")
 
+ax = plt.gca()
+ax.xaxis.set_major_locator(mdates.MonthLocator(interval=1))      
+ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %Y'))       
+plt.gcf().autofmt_xdate()                                        
+
+plt.grid(True, linestyle='--', alpha=0.4)
+plt.legend()
+plt.tight_layout()
+plt.show()
