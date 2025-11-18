@@ -5,11 +5,12 @@ import matplotlib.dates as mdates
 
 infectious_period = 11          
 N_population = 4_660_000       
-beta_estimate = 1.365           
+beta_estimate = 1.365     
+sigma_estimate = 0.1          
+
 
 df = pd.read_csv("l.csv")
 df['Date'] = pd.to_datetime(df['Date'])
-
 
 df['new_cases'] = df['cum_cases'].diff().fillna(0)
 df['new_deaths'] = df['cum_deaths'].diff().fillna(0)
@@ -36,6 +37,7 @@ num_steps = int(T_days / dt) + 1
 t = np.linspace(0, T_days, num_steps)  
 
 S = np.zeros(num_steps)
+E = np.zeros(num_steps) 
 I = np.zeros(num_steps)
 R = np.zeros(num_steps)
 
@@ -45,10 +47,12 @@ R[0] = 0
 
 for k in range(1, num_steps):
     dS = -beta_estimate * S[k - 1] * I[k - 1] / N_population
+    dE = (beta_estimate * S[ k - 1] * I[k - 1]) / N_population - sigma_estimate * E[k - 1]
     dI = beta_estimate * S[k - 1] * I[k - 1] / N_population - nu * I[k - 1]
     dR = nu * I[k - 1]
 
     S[k] = S[k - 1] + dS * dt
+    E[k] = E[k - 1] + dE * dt # Exposed Model
     I[k] = I[k - 1] + dI * dt
     R[k] = R[k - 1] + dR * dt
 
@@ -60,6 +64,7 @@ plt.figure(figsize=(12, 6))
 
 plt.plot(date_fine, S, linewidth=2, label='Susceptible $S(t)$ (model)')
 plt.plot(date_fine, I, linewidth=2, label='Infected $I(t)$ (model)')
+plt.plot(date_fine, E, linewidth=2, label='Exposed $E(t)$ (model)')
 plt.plot(date_fine, R, linewidth=2, label='Removed $R(t)$ (model)')
 
 plt.title(

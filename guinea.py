@@ -6,7 +6,8 @@ import matplotlib.dates as mdates
 
 infectious_period = 11           
 N_population = 11_770_000        
-beta_estimate = 2.002            
+beta_estimate = 2.002  
+sigma_estimate = 0.1          
 
 df = pd.read_csv("g.csv")
 df['Date'] = pd.to_datetime(df['Date'])
@@ -39,21 +40,25 @@ num_steps = int(T_days / dt) + 1
 t = np.linspace(0, T_days, num_steps)
 
 S = np.zeros(num_steps)
-I = np.zeros(num_steps)
+E = np.zeros(num_steps) 
+I = np.zeros(num_steps)  
 R = np.zeros(num_steps)
 
 # Initial conditions
 S[0] = N_population - 1
 I[0] = 1
+E[0] = 0
 R[0] = 0
 
 for k in range(1, num_steps):
-    dS = -beta_estimate * S[k - 1] * I[k - 1] / N_population
-    dI = beta_estimate * S[k - 1] * I[k - 1] / N_population - nu * I[k - 1]
+    dS = (-beta_estimate * S[k - 1] * I[k - 1]) / N_population
+    dE = (beta_estimate * S[ k - 1] * I[k - 1]) / N_population - sigma_estimate * E[k - 1]
+    dI = (beta_estimate * S[k - 1] * I[k - 1]) / N_population - nu * I[k - 1]
     dR = nu * I[k - 1]
 
     S[k] = S[k - 1] + dS * dt
     I[k] = I[k - 1] + dI * dt
+    E[k] = E[k - 1] + dE * dt # Exposed Model
     R[k] = R[k - 1] + dR * dt
 
 start_date = df['Date'].iloc[0]
@@ -64,6 +69,7 @@ plt.figure(figsize=(12, 6))
 
 plt.plot(date_fine, S, linewidth=2, label='Susceptible $S(t)$ (model)')
 plt.plot(date_fine, I, linewidth=2, label='Infected $I(t)$ (model)')
+plt.plot(date_fine, E, linewidth=2, label='Exposed $E(t)$ (model)')
 plt.plot(date_fine, R, linewidth=2, label='Removed $R(t)$ (model)')
 
 plt.title(
@@ -71,6 +77,7 @@ plt.title(
     f"SIR parameters: β = {beta_estimate:.3f}, ν = {nu:.3f} (1/day), "
     f"$R_0$ = {R0:.2f}, Population N = {N_population:,}"
 )
+
 plt.xlabel("Date")
 plt.ylabel("Number of individuals")
 
